@@ -32,6 +32,33 @@ def get_top_tracks():
     conn.commit()
     conn.close()
 
+def get_genre_count(tracks):
+    """
+    Given a list of tracks, returns a dictionary with the total number of tracks per genre.
+    """
+    genre_count = {}
+    for track in tracks:
+        genre = track.genre
+        if genre in genre_count:
+            genre_count[genre] += 1
+        else:
+            genre_count[genre] = 1
+    return genre_count
+
+def get_genre_listeners(tracks):
+    """
+    Given a list of tracks, returns a dictionary with the total number of listeners per genre.
+    """
+    genre_listeners = {}
+    for track in tracks:
+        genre = track.genre
+        listeners = track.playback_count
+        if genre in genre_listeners:
+            genre_listeners[genre] += listeners
+        else:
+            genre_listeners[genre] = listeners
+    return genre_listeners
+
 def main():
     get_top_tracks()
 
