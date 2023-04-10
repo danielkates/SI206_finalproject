@@ -6,33 +6,34 @@ import sqlite3
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import soundcloud
+import sqlite3
+
+SOUNDCLOUD_CLIENT_ID = 'your_soundcloud_client_id'
 
 def get_top_tracks():
-    # Set up the API credentials
-    CLIENT_ID = 'INSERT_CLIENT_ID_HERE'
+    # Authenticate with SoundCloud API
+    client = soundcloud.Client(client_id=SOUNDCLOUD_CLIENT_ID)
 
-    # Set up the API endpoint for retrieving the top tracks
-    top_tracks_endpoint = 'https://api-v2.soundcloud.com/charts?kind=top&genre=soundcloud:genres:all-music&limit=100&offset=0&date=year'
+    # Retrieve top 100 tracks from SoundCloud API
+    tracks = client.get('/tracks', limit=100, order='hotness')
 
-    # Make a request to retrieve the top tracks
-    response = requests.get(top_tracks_endpoint, headers={'client_id': CLIENT_ID})
-
-    # Parse the track data from the response
-    tracks_data = response.json()['collection']
-
-    # Set up a connection to the SQLite database
-    conn = sqlite3.connect('music_data.db')
+    # Store top tracks in a SQLite database
+    conn = sqlite3.connect('soundcloud_top_tracks.db')
     c = conn.cursor()
-
-    # Insert the track data into the database
-    for track in tracks_data:
-        name = track['title']
-        artist = track['user']['username']
-        genre = track['genre']
-        playback_count = track['playback_count']
-        c.execute('INSERT INTO top_tracks (name, artist, genre, playback_count) VALUES (?, ?, ?, ?)',
-                  (name, artist, genre, playback_count))
-
-    # Commit the changes and close the connection
+    c.execute('CREATE TABLE IF NOT EXISTS tracks (id TEXT PRIMARY KEY, name TEXT, artist TEXT, playback_count INTEGER, genre TEXT)')
+    for track in tracks:
+        track_id = str(track.id)
+        name = track.title
+        artist = track.user['username']
+        playback_count = track.playback_count
+        genre = '' # Set genre to empty string for now
+        c.execute('INSERT OR REPLACE INTO tracks VALUES (?, ?, ?, ?, ?)', (track_id, name, artist, playback_count, genre))
     conn.commit()
     conn.close()
+
+def main():
+    get_top_tracks()
+
+if __name__ == '__main__':
+    main()

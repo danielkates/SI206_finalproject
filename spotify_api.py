@@ -8,63 +8,44 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 import pandas as pd
+import spotipy
+import spotipy.util as util
+
+
+SPOTIFY_USERNAME = 'your_spotify_username'
+SPOTIFY_CLIENT_ID = 'your_spotify_client_id'
+SPOTIFY_CLIENT_SECRET = 'your_spotify_client_secret'
+SPOTIFY_REDIRECT_URI = 'http://localhost:8000/callback'
 
 def get_top_tracks():
-    # Set up the API credentials
-    CLIENT_ID = 'INSERT_CLIENT_ID_HERE'
-    CLIENT_SECRET = 'INSERT_CLIENT_SECRET_HERE'
+    # Authenticate with Spotify API
+    token = util.prompt_for_user_token(SPOTIFY_USERNAME, 'user-top-read',
+                                       client_id=SPOTIFY_CLIENT_ID,
+                                       client_secret=SPOTIFY_CLIENT_SECRET,
+                                       redirect_uri=SPOTIFY_REDIRECT_URI)
 
-    # Set up the authentication headers
-    headers = {
-        'Authorization': 'Bearer ' + access_token,
-        'Content-Type': 'application/json'
-    }
+    if token:
+        # Retrieve top 100 tracks from Spotify API
+        sp = spotipy.Spotify(auth=token)
+        results = sp.current_user_top_tracks(limit=100, time_range='medium_term')
+        tracks = results['items']
 
-    # Make a request to retrieve the access token
-    auth_response = requests.post('https://accounts.spotify.com/api/token', {
-        'grant_type': 'client_credentials',
-        'client_id': CLIENT_ID,
-        'client_secret': CLIENT_SECRET,
-    })
+        # Store top tracks in a SQLite database
+        conn = sqlite3.connect('spotify_top_tracks.db')
+        c = conn.cursor()
+        c.execute('CREATE TABLE IF NOT EXISTS tracks (id TEXT PRIMARY KEY, name TEXT, artist TEXT, popularity INTEGER, genre TEXT)')
+        for track in tracks:
+            track_id = track['id']
+            name = track['name']
+            artist = track['artists'][0]['name']
+            popularity = track['popularity']
+            genre = '' # Set genre to empty string for now
+            c.execute('INSERT OR REPLACE INTO tracks VALUES (?, ?, ?, ?, ?)', (track_id, name, artist, popularity, genre))
+        conn.commit()
+        conn.close()
 
-    # Parse the access token from the response
-    access_token = auth_response.json()['access_token']
+def main():
+    get_top_tracks()
 
-    # Set up the API endpoint for retrieving the top tracks
-    top_tracks_endpoint = 'https://api.spotify.com/v1/charts/top?limit=100&offset=0&country=global&type=tracks&time_range=year'
-
-    # Make a request to retrieve the top tracks
-    response = requests.get(top_tracks_endpoint, headers=headers)
-
-    # Parse the track data from the response
-    tracks_data = response.json()['tracks']
-
-    # Set up a connection to the SQLite database
-    conn = sqlite3.connect('music_data.db')
-    c = conn.cursor()
-
-    # Create a table to store the track data
-    c.execute('''CREATE TABLE IF NOT EXISTS top_tracks
-                 (id INTEGER PRIMARY KEY,
-                  name TEXT,
-                  artist TEXT,
-                  genre TEXT,
-                  popularity INTEGER)''')
-
-    # Insert the track data into the database
-    for track in tracks_data:
-        track_id = track['id']
-        track_endpoint = f'https://api.spotify.com/v1/tracks/{track_id}'
-        track_response = requests.get(track_endpoint, headers=headers)
-        track_data = track_response.json()
-        name = track_data['name']
-        artist = track_data['artists'][0]['name']
-        genres = track_data['genres']
-        popularity = track['popularity']
-        for genre in genres:
-            c.execute('INSERT INTO top_tracks (name, artist, genre, popularity) VALUES (?, ?, ?, ?)',
-                      (name, artist, genre, popularity))
-
-    # Commit the changes and close the connection
-    conn.commit()
-    conn.close()
+if __name__ == '__main__':
+    main()
