@@ -71,6 +71,39 @@ def get_genre_listeners(songs):
             genre_listeners[genre] = listeners
     return genre_listeners
 
+def analyze_data(db_file):
+    # Connect to database
+    conn = sqlite3.connect(db_file)
+    c = conn.cursor()
+
+    # Query all songs from top 100
+    c.execute("SELECT * FROM spotify_top100")
+    songs = c.fetchall()
+
+    # Initialize genre and listener count dictionaries
+    genre_counts = {}
+    listener_counts = {}
+
+    # Iterate through each song and update genre and listener counts
+    for song in songs:
+        genre = song[2]
+        listeners = song[3]
+        if genre not in genre_counts:
+            genre_counts[genre] = 1
+            listener_counts[genre] = listeners
+        else:
+            genre_counts[genre] += 1
+            listener_counts[genre] += listeners
+
+    # Print out genre and listener counts
+    print("Spotify Genre Counts:")
+    print(genre_counts)
+    print("Spotify Listener Counts:")
+    print(listener_counts)
+
+    # Close database connection
+    conn.close()
+
 def main():
     get_top_tracks()
 
