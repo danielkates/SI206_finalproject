@@ -9,67 +9,66 @@ import numpy as np
 import seaborn as sns
 import pandas as pd
 import spotipy
-import spotipy.util as util
+from spotipy.oauth2 import SpotifyOAuth
 
 
-SPOTIFY_USERNAME = 'your_spotify_username'
-SPOTIFY_CLIENT_ID = 'your_spotify_client_id'
-SPOTIFY_CLIENT_SECRET = 'your_spotify_client_secret'
-SPOTIFY_REDIRECT_URI = 'http://localhost:8000/callback'
 
-def get_top_tracks():
-    # Authenticate with Spotify API
-    token = util.prompt_for_user_token(SPOTIFY_USERNAME, 'user-top-read',
-                                       client_id=SPOTIFY_CLIENT_ID,
-                                       client_secret=SPOTIFY_CLIENT_SECRET,
-                                       redirect_uri=SPOTIFY_REDIRECT_URI)
 
-    if token:
-        # Retrieve top 100 tracks from Spotify API
-        sp = spotipy.Spotify(auth=token)
-        results = sp.current_user_top_tracks(limit=100, time_range='medium_term')
-        tracks = results['items']
+def get_top_tracks(conn):
+    # Initialize Spotify API client with user authorization
+    auth_manager = SpotifyOAuth(
+        client_id="26030839b43a4f679198b03e28a7ba1a",
+        client_secret="e69ba868f41e4029a74096a9d997abae",
+        redirect_uri="http://localhost:8000/callback",
+        scope="user-library-read"
+    )
+    sp = spotipy.Spotify(auth_manager=auth_manager)
 
-        # Store top tracks in a SQLite database
-        conn = sqlite3.connect('spotify_top_tracks.db')
-        c = conn.cursor()
-        c.execute('CREATE TABLE IF NOT EXISTS tracks (id TEXT PRIMARY KEY, name TEXT, artist TEXT, popularity INTEGER, genre TEXT)')
-        for track in tracks:
-            track_id = track['id']
-            name = track['name']
-            artist = track['artists'][0]['name']
-            popularity = track['popularity']
-            genre = '' # Set genre to empty string for now
-            c.execute('INSERT OR REPLACE INTO tracks VALUES (?, ?, ?, ?, ?)', (track_id, name, artist, popularity, genre))
-        conn.commit()
-        conn.close()
+    # Create the tracks table if it doesn't exist
+    c = conn.cursor()
+    c.execute('DROP TABLE IF EXISTS Tracks')
+    c.execute('CREATE TABLE Tracks (id TEXT PRIMARY KEY, name TEXT, genre TEXT, popularity INTEGER)')
 
-def get_genre_count(songs):
+    # Get the first 100 tracks from the playlist
+    results = sp.playlist_tracks('spotify:playlist:3IsxzDS04BvejFJcQ0iVyW', limit=100)
+
+    # Insert or replace each track in the database
+    for item in results['items']:
+        track = item['track']
+        song_id = track['id']
+        song_genre = sp.artist(track['artists'][0]['uri'])['genres']
+        song_popularity = track['popularity']
+        c.execute('INSERT OR REPLACE INTO tracks VALUES (?, ?, ?, ?)', (song_id, track['name'], song_genre, song_popularity))
+
+    # Commit changes and close the database connection
+    conn.commit()
+    conn.close()
+
+
+def get_genre_count(conn, genre):
     """
-    Given a list of songs, returns a dictionary with the total number of songs per genre.
+    Given a list of songs, returns the number of songs with the given genre in the tracks table.
     """
-    genre_count = {}
-    for song in songs:
-        genre = song["genre"]
-        if genre in genre_count:
-            genre_count[genre] += 1
-        else:
-            genre_count[genre] = 1
-    return genre_count
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM tracks WHERE genre = ?", (genre,))
+    count = c.fetchone()[0]
+    return count
 
-def get_genre_listeners(songs):
+
+def get_genre_listeners(conn, genre):
     """
-    Given a list of songs, returns a dictionary with the total number of listeners per genre.
+    Given a genre, returns the total number of listeners of all songs in that genre.
     """
-    genre_listeners = {}
-    for song in songs:
-        genre = song["genre"]
-        listeners = song["listeners"]
-        if genre in genre_listeners:
-            genre_listeners[genre] += listeners
-        else:
-            genre_listeners[genre] = listeners
-    return genre_listeners
+    c = conn.cursor()
+    c.execute("SELECT * FROM tracks WHERE genre = ?", (genre,))
+    rows = c.fetchall()
+    total_listeners = 0
+    for song in rows:
+        listeners = song[3]  # the popularity is in the 4th column (0-indexed)
+        total_listeners += listeners
+    return total_listeners
+
+
 
 def analyze_data(db_file):
     # Connect to database
