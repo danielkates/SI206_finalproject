@@ -30,9 +30,9 @@ def get_soundcloud_data():
     return data
 
 # function to create table in SQLite database
-def create_soundcloud_table():
+def create_soundcloud_table(data):
     # Connect to SQLite database
-    conn = sqlite3.connect('music.db')
+    conn = sqlite3.connect('Soundcloud.db')
 
     # Create cursor object
     c = conn.cursor()
@@ -45,19 +45,7 @@ def create_soundcloud_table():
                  genre TEXT,
                  listeners INTEGER)''')
 
-    # Commit changes and close connection
-    conn.commit()
-    conn.close()
-
-# function to store data in SQLite database
-def store_soundcloud_data(data):
-    # Connect to SQLite database
-    conn = sqlite3.connect('music.db')
-
-    # Create cursor object
-    c = conn.cursor()
-
-    # Loop through data and insert into Soundcloud table
+    # Insert data into the Soundcloud table
     for track in data:
         c.execute("INSERT INTO soundcloud (title, artist, genre, listeners) VALUES (?, ?, ?, ?)",
                   (track['title'], track['artist'], track['genre'], track['listeners']))
@@ -66,11 +54,11 @@ def store_soundcloud_data(data):
     conn.commit()
     conn.close()
 
+
 # main function to run program
 def main():
     soundcloud_data = get_soundcloud_data()
-    create_soundcloud_table()
-    store_soundcloud_data(soundcloud_data)
+    create_soundcloud_table(soundcloud_data)
 
 if __name__ == "__main__":
     main()
