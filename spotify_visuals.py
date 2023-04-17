@@ -3,7 +3,7 @@ import sqlite3
 
 def create_genre_pie_chart():
     # Connect to the database
-    conn = sqlite3.connect('music_data.db')
+    conn = sqlite3.connect('spotify.db')
     c = conn.cursor()
 
     # Get the total number of listeners per genre
@@ -19,7 +19,7 @@ def create_genre_pie_chart():
 
 def create_listener_pie_chart():
     # Connect to the database
-    conn = sqlite3.connect('music_data.db')
+    conn = sqlite3.connect('spotify.db')
     c = conn.cursor()
 
     # Get the total number of listeners per song
@@ -32,3 +32,6 @@ def create_listener_pie_chart():
     plt.pie(values, labels=labels, autopct='%1.1f%%')
     plt.title('Spotify Top 10 Most Listened to Songs')
     plt.show()
+
+create_genre_pie_chart()
+create_listener_pie_chart()
