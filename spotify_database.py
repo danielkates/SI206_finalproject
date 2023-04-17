@@ -40,7 +40,7 @@ def get_top_100_songs():
     # Commit the changes and close the connection
     conn.commit()
     conn.close()
-    
+    print(spotify)
     return spotify
 
 
