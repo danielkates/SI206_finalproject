@@ -11,15 +11,12 @@ client_id = "ej2EhnKyOGiOmU4u6c1jWrb3ME57bC_lu1NYruV6nyfx8A7rLCHhMSQZ5x_7UuFQ"
 client_secret = "oQUxj0zBXCWht5tkWRoU-543Q5Lvfz4C6pODefEsQF0PWsFdbRsXqd68QA-uJ2lHdUutEDnyTPaXAoqms6q1zg"
 
 def get_top_100_songs():
-    """
-    Returns a list of the top 100 songs from the Genius API.
-    """
+
     genius = lyricsgenius.Genius("7sVvsK_kYL2Ek7UPDDPAwX3-LXDQkiK-hWA8ucfe3yhgP0cGyeJOix6V_bZt6Wy8")
     genius.remove_section_headers = True
     genius.skip_non_songs = True
     genius.excluded_terms = ["(Remix)", "(Live)"]
 
-    # Create the tables if they don't exist
     conn = sqlite3.connect('all_tables.db')
     conn.execute('''CREATE TABLE IF NOT EXISTS genius
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -35,16 +32,13 @@ def get_top_100_songs():
                   added_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                   FOREIGN KEY(top_song_rank) REFERENCES genius(id));''')
 
-    # Get the last added song from the database
     last_song = conn.execute('''SELECT id FROM genius ORDER BY added_on DESC LIMIT 1''').fetchone()
 
-    # Set the starting page for the API request
     if last_song is not None:
         start_page = (last_song[0] // 25) + 1
     else:
         start_page = 1
 
-    # Loop over the API results and add new songs to the database
     count = 0
     for i in range(start_page, start_page + 10):
         api = PublicAPI()
@@ -61,11 +55,9 @@ def get_top_100_songs():
         if count >= 25:
             break
 
-    # Get the top 10 artists based on the number of songs in the 'songs' table
     top_artists = conn.execute('''SELECT artist, COUNT(*) as num_songs
                                    FROM genius GROUP BY artist ORDER BY num_songs DESC LIMIT 10''').fetchall()
 
-    # Insert the artists into the 'artists' table
     rank_count = 1
     for artist in top_artists:
         name = artist[0]
@@ -76,7 +68,6 @@ def get_top_100_songs():
                      (name, rank, num_popular_songs, top_song_rank))
         rank_count += 1
 
-    # Commit the changes and close the connection
     conn.commit()
     conn.close()
 

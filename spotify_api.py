@@ -10,9 +10,7 @@ client_credentials_manager = SpotifyClientCredentials(client_id, client_secret)
 sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
 
 def add_next_25_songs():
-    """
-    Adds the next 25 songs from the Spotify playlist to the 'spotify' table in the 'all_tables.db' database.
-    """
+
     sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id='your_client_id', client_secret='your_client_secret'))
 
     conn = sqlite3.connect('all_tables.db')
@@ -21,16 +19,13 @@ def add_next_25_songs():
                    track_name TEXT,
                    artist TEXT,
                    popularity INTEGER);''')
-    # Get the last added song from the database
     last_song = conn.execute('''SELECT id FROM spotify ORDER BY id DESC LIMIT 1''').fetchone()
 
-    # Set the starting count for the API request
     if last_song is not None:
         count = last_song[0] 
     else:
         count = 0
 
-    # Add the next 25 songs to the 'spotify' table
 
     results = sp.playlist_tracks('spotify:playlist:3IsxzDS04BvejFJcQ0iVyW', limit=25, offset=count)
     spotify = pd.DataFrame(columns=['Track Name', 'Artist', 'Popularity'])
@@ -47,7 +42,6 @@ def add_next_25_songs():
             break
 
 
-    # Commit the changes and close the connection
     conn.commit()
     conn.close()
 
