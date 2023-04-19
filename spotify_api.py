@@ -11,7 +11,7 @@ sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
 
 def add_next_25_songs():
 
-    sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id='your_client_id', client_secret='your_client_secret'))
+    sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id='26030839b43a4f679198b03e28a7ba1a', client_secret='e69ba868f41e4029a74096a9d997abae'))
 
     conn = sqlite3.connect('all_tables.db')
     conn.execute('''CREATE TABLE IF NOT EXISTS spotify
